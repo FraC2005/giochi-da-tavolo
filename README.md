@@ -1,1 +1,120 @@
-# giochi-da-tavolo
+# Dama & Scacchi
+
+Sito vetrina dove scegli **Dama** o **Scacchi** e giochi contro un amico: sullo stesso schermo a turni, oppure
+online da case diverse con un codice stanza. Nessuna registrazione.
+
+Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
+scacchi, motore della dama scritto da zero. Il gioco online usa **Supabase** (database Postgres gratuito con
+sincronizzazione in tempo reale), perché **Netlify ospita solo siti statici**: non può far girare un backend
+Django o un server con WebSocket persistenti.
+
+## Avvio in locale
+
+```bash
+npm install
+npm run dev        # http://localhost:5175
+npm run test       # test del motore di dama e scacchi
+npm run build      # controllo dei tipi + build di produzione
+```
+
+Senza configurare Supabase (vedi sotto), il sito funziona comunque: la modalità "stesso schermo" non ne ha
+bisogno. La modalità online mostrerà un avviso invece di un errore.
+
+## Cosa c'è
+
+- **Scacchi**: regole complete tramite `chess.js` — arrocco, en passant, promozione (con scelta del pezzo),
+  scacco, scacco matto, stallo, patta per tripla ripetizione/materiale insufficiente/50 mosse. Scacchiera con
+  clic o trascinamento, evidenziazione delle mosse legali, pezzi catturati, tabellone che ruota a ogni turno
+  in modalità locale.
+- **Dama**: motore scritto per questo progetto (`src/games/checkers/engine.ts`, con test in `engine.test.ts`) —
+  8×8, cattura obbligata, catture multiple con lo stesso pezzo, promozione a dama che termina il turno, sconfitta
+  per assenza di mosse legali, patta dopo troppe mosse senza catture.
+- **Online**: crea una stanza (codice a 5 caratteri) o entra con un codice; la partita si sincronizza in tempo
+  reale tramite Supabase. Rivincita con i colori invertiti senza cambiare stanza.
+
+## Configurare Supabase per il gioco online
+
+1. Crea un account gratuito su [supabase.com](https://supabase.com) e un nuovo progetto.
+2. Nella sezione **SQL Editor** del progetto, esegui:
+
+```sql
+create table rooms (
+  code text primary key,
+  game text not null check (game in ('chess', 'checkers')),
+  state jsonb not null,
+  host_id text not null,
+  guest_id text,
+  host_name text not null,
+  guest_name text,
+  winner text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace function touch_updated_at() returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger rooms_touch_updated_at before update on rooms
+  for each row execute function touch_updated_at();
+
+alter table rooms enable row level security;
+
+-- Politiche permissive: chi conosce il codice stanza può leggerla e scriverci.
+-- Adatto a una partita informale tra amici, non a dati sensibili (vedi nota di sicurezza sotto).
+create policy "chiunque legge" on rooms for select using (true);
+create policy "chiunque crea" on rooms for insert with check (true);
+create policy "chiunque aggiorna" on rooms for update using (true);
+
+alter publication supabase_realtime add table rooms;
+```
+
+3. In **Project Settings → API**, copia "Project URL" e la chiave "anon public".
+4. Crea un file `.env.local` nella cartella del progetto (copia `.env.example`) e incolla i due valori:
+
+```
+VITE_SUPABASE_URL=https://xxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbG....
+```
+
+5. Riavvia `npm run dev`. Su Netlify, imposta le stesse due variabili in **Site settings → Environment variables**
+   prima di fare il deploy (sono lette al momento della build, come tutte le variabili `VITE_*`).
+
+**Nota di sicurezza**: le policy sopra sono deliberatamente aperte (nessun login). Chiunque conosca o indovini
+un codice stanza può leggerne e modificarne lo stato — accettabile per una partita informale con amici dove il
+codice si manda a mano, ma non usarlo per dati sensibili. Il gioco online non l'ho potuto collaudare con un
+progetto Supabase reale (serve un account che solo tu puoi creare): la logica è stata rivista con cura,
+compresa la gestione della condizione di corsa quando due persone provano a entrare nella stessa stanza nello
+stesso istante, ma testala con un amico prima di contarci per un torneo importante.
+
+## Deploy su Netlify
+
+1. Metti il progetto su GitHub (o GitLab/Bitbucket).
+2. Su [netlify.com](https://netlify.com), "Add new site" → "Import an existing project" → scegli il repository.
+3. Netlify legge `netlify.toml` in automatico (comando `npm run build`, cartella pubblicata `dist`).
+4. Se vuoi il gioco online, aggiungi le due variabili d'ambiente Supabase prima del primo deploy (punto 5 sopra).
+5. Deploy. Il link che ottieni è quello da condividere con i tuoi amici.
+
+## Struttura del progetto
+
+```
+src/
+  games/
+    chess/      engine.ts (involucro su chess.js), useChessGame.ts, ChessBoard.vue, PromotionPicker.vue
+    checkers/   engine.ts (motore scritto da zero), useCheckersGame.ts, CheckersBoard.vue
+  components/   RoomLobby, GameOverPanel, StatusBar, BackPill — condivisi tra i due giochi
+  lib/          player.ts (identità anonima nel browser), supabase.ts, onlineRoom.ts (stanze in tempo reale)
+  views/        HomeView, GameMenuView, e Local/OnlineView per ciascun gioco
+```
+
+## Limiti noti
+
+- Le pagine online richiedono che entrambi i giocatori tengano la scheda aperta; non c'è notifica se l'altro
+  si disconnette, solo l'assenza di risposta.
+- Nessuna cronologia delle partite passate, nessun profilo, nessuna classifica: è pensato per una partita alla
+  volta tra amici.
+- Il motore della dama implementa le regole anglo-americane classiche (non le varianti internazionali con le
+  "dame volanti" o la regola della cattura massima obbligatoria).

@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+
+@plugin 'daisyui' {
+  themes: false;
+}
+
+/*
+ * "Pop giocoso": colorato, arrotondato, amichevole. Un font tondo per i titoli (Baloo 2),
+ * Inter per il testo. Rosa come accento principale, azzurro/viola come secondari, il corallo
+ * riservato agli avvisi reali (scacco). Pensato per un'arcade con molti giochi: ogni gioco
+ * porta la propria coppia di colori (vedi registry.ts), il resto della UI resta condiviso.
+ */
+@plugin 'daisyui/theme' {
+  name: 'arena-light';
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #fdf6ec;
+  --color-base-300: #f0e3f5;
+  --color-base-content: #241832;
+  --color-primary: #ff5da2;
+  --color-primary-content: #2a0f1c;
+  --color-secondary: #8ecae6;
+  --color-secondary-content: #0b2a38;
+  --color-accent: #b591ff;
+  --color-accent-content: #241832;
+  --color-neutral: #6b5f80;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ecae6;
+  --color-info-content: #0b2a38;
+  --color-success: #34c98a;
+  --color-success-content: #04241a;
+  --color-warning: #ffb347;
+  --color-warning-content: #3a2400;
+  --color-error: #ef476f;
+  --color-error-content: #ffffff;
+  --radius-selector: 1rem;
+  --radius-field: 0.85rem;
+  --radius-box: 1.25rem;
+  --border: 1px;
+}
+
+@plugin 'daisyui/theme' {
+  name: 'arena-dark';
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #1e1830;
+  --color-base-200: #171224;
+  --color-base-300: #2c2440;
+  --color-base-content: #f3ecff;
+  --color-primary: #ff6fb0;
+  --color-primary-content: #2a0f1c;
+  --color-secondary: #7dd3fc;
+  --color-secondary-content: #062633;
+  --color-accent: #c4a6ff;
+  --color-accent-content: #241832;
+  --color-neutral: #9d93b8;
+  --color-neutral-content: #1a1626;
+  --color-info: #7dd3fc;
+  --color-info-content: #062633;
+  --color-success: #4ade80;
+  --color-success-content: #04240f;
+  --color-warning: #ffc069;
+  --color-warning-content: #3a2400;
+  --color-error: #ff7b93;
+  --color-error-content: #33020c;
+  --radius-selector: 1rem;
+  --radius-field: 0.85rem;
+  --radius-box: 1.25rem;
+  --border: 1px;
+}
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --page-gradient: linear-gradient(160deg, #fff2d6, #ffe1ee 55%, #e3e0ff);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --page-gradient: linear-gradient(160deg, #241a38, #1c1430 55%, #171224); }
+}
+:root[data-theme='dark'] { --page-gradient: linear-gradient(160deg, #241a38, #1c1430 55%, #171224); }
+
+html, body, #app { height: 100%; }
+body { margin: 0; }
+.tabular { font-variant-numeric: tabular-nums; }
+.font-display { font-family: 'Baloo 2', 'Inter', system-ui, sans-serif; }
+.page-gradient { background: var(--page-gradient); }
+
+/* Bottone principale con lo stesso spirito del CTA nei mockup: rosa-arancio, sempre a pillola. */
+.btn-pop { background: linear-gradient(90deg, var(--color-primary), #ff8f5d); color: var(--color-primary-content); border: none; }
+.btn-pop:hover { filter: brightness(1.04); }
+
+/*
+ * Le scacchiere hanno colori di casella fissi, indipendenti dal tema chiaro/scuro del sito:
+ * un'evidenziazione legata ai colori del tema (com'era qui in origine) può quindi sparire su
+ * una casella già dello stesso tono. Queste due classi sono l'unica parte del linguaggio di
+ * evidenziazione condivisa tra le scacchiere: schiariscono/scuriscono sempre la casella sotto,
+ * qualunque sia il suo colore, quindi funzionano per qualsiasi gioco futuro con caselle proprie.
+ * I colori dei puntini/anelli di mossa, invece, sono scelti da ogni scacchiera in base ai propri
+ * due colori (vedi ChessBoard.vue e CheckersBoard.vue), perché un'unica tinta non può garantire
+ * un contrasto sufficiente su coppie di colori diverse.
+ */
+.hl-lighten { background-color: rgba(255, 255, 255, 0.25); }
+.hl-darken { background-color: rgba(0, 0, 0, 0.12); }
+
+@keyframes pop-in { from { opacity: 0; scale: 0.94; } to { opacity: 1; scale: 1; } }
