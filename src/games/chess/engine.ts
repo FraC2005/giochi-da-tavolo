@@ -42,6 +42,23 @@ export class ChessGame {
     return this.legalMovesFrom(from).some((m) => m.to === to && !!m.promotion)
   }
 
+  /**
+   * Se `from` è il proprio re e `to` è la casella della propria torre con cui si può arroccare,
+   * ritorna la casella dove finirebbe il re per quell'arrocco (g1/c1/g8/c8), altrimenti null.
+   * Permette di arroccare anche cliccando o trascinando il re sopra la torre, non solo sulla
+   * casella esatta di arrivo del re: un'imprecisione facile con la scacchiera che ruota a ogni
+   * turno in modalità locale.
+   */
+  castleTargetFor(from: string, to: string): string | null {
+    const piece = this.chess.get(from as Square)
+    if (!piece || piece.type !== 'k') return null
+    const rank = piece.color === 'w' ? '1' : '8'
+    const moves = this.legalMovesFrom(from)
+    if (to === `h${rank}` && moves.some((m) => m.to === `g${rank}`)) return `g${rank}`
+    if (to === `a${rank}` && moves.some((m) => m.to === `c${rank}`)) return `c${rank}`
+    return null
+  }
+
   /** Prova la mossa; ritorna null se illegale. `promotion`: 'q'|'r'|'b'|'n'. */
   tryMove(from: string, to: string, promotion?: string): MoveRecord | null {
     try {

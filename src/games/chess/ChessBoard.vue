@@ -52,8 +52,9 @@ function onDragStart(e: DragEvent, cell: Cell) {
   e.dataTransfer!.effectAllowed = 'move'
 }
 function onDrop(e: DragEvent, cell: Cell) {
-  const from = e.dataTransfer?.getData('text/plain')
-  if (from && props.legalTargets.includes(cell.square)) emit('square-click', cell.square)
+  // La legalità la valuta clickSquare (anche l'arrocco trascinando il re sulla torre, non solo
+  // sulla casella esatta di arrivo): qui basta sapere che il trascinamento è partito da una nostra casella.
+  if (e.dataTransfer?.getData('text/plain')) emit('square-click', cell.square)
 }
 </script>
 

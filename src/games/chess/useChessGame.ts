@@ -60,6 +60,10 @@ export function useChessGame(initialMoves: MoveRecord[] = [], onMove?: (moves: M
     if (pendingPromotion.value) return
     if (selected.value === square) { selected.value = null; return }
     if (selected.value && legalTargets.value.includes(square)) { commit(selected.value, square); return }
+    if (selected.value) {
+      const castleTo = game.value.castleTargetFor(selected.value, square)
+      if (castleTo) { commit(selected.value, castleTo); return }
+    }
     if (!canMove) { selected.value = null; return }
     const piece = game.value.board.flat().find((c) => c?.square === square)
     selected.value = piece && piece.color === game.value.turn ? square : null

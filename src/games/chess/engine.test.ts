@@ -46,6 +46,25 @@ describe('ChessGame wrapper', () => {
     expect(replay.historySAN()).toEqual(original.historySAN())
   })
 
+  it('lets the king castle kingside once the squares between are clear, moving the rook too', () => {
+    const game = new ChessGame()
+    for (const [from, to] of [['g1', 'f3'], ['a7', 'a6'], ['g2', 'g3'], ['a6', 'a5'], ['f1', 'g2'], ['a5', 'a4']] as const) {
+      expect(game.tryMove(from, to)).not.toBeNull()
+    }
+    expect(game.tryMove('e1', 'g1')).toEqual({ from: 'e1', to: 'g1', promotion: undefined })
+    expect(game.fen).toContain('RNBQ1RK1') // il re è finito in g1, la torre si è spostata assieme a lui in f1
+  })
+
+  it('castleTargetFor: lets the king castle by clicking/dragging onto its own rook, not just the exact landing square', () => {
+    const game = new ChessGame()
+    for (const [from, to] of [['g1', 'f3'], ['a7', 'a6'], ['g2', 'g3'], ['a6', 'a5'], ['f1', 'g2'], ['a5', 'a4']] as const) {
+      expect(game.tryMove(from, to)).not.toBeNull()
+    }
+    expect(game.castleTargetFor('e1', 'h1')).toBe('g1')
+    expect(game.castleTargetFor('e1', 'f1')).toBeNull() // f1 non è una torre propria: nessun arrocco implicito
+    expect(game.castleTargetFor('a7', 'h1')).toBeNull() // non è nemmeno il re a muoversi
+  })
+
   it('rejects a move that is legal in shape but leaves the king in check (pinned piece)', () => {
     // L'alfiere nero in b4 inchioda il cavallo bianco in c3 al proprio re in e1 (diagonale b4-c3-d2-e1, libera).
     const game = new ChessGame()

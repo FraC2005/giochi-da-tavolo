@@ -27,7 +27,9 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
 - **Scacchi**: regole complete tramite `chess.js` — arrocco, en passant, promozione (con scelta del pezzo),
   scacco, scacco matto, stallo, patta per tripla ripetizione/materiale insufficiente/50 mosse. Scacchiera con
   clic o trascinamento, evidenziazione delle mosse legali, pezzi catturati, tabellone che ruota a ogni turno
-  in modalità locale.
+  in modalità locale. Per l'arrocco basta anche trascinare o cliccare il re direttamente sulla propria torre
+  (non serve centrare esattamente la casella d'arrivo del re), utile proprio perché il tabellone ruota a ogni
+  turno in locale.
 - **Dama**: motore scritto per questo progetto (`src/games/checkers/engine.ts`, con test in `engine.test.ts`) —
   8×8, cattura obbligata, catture multiple con lo stesso pezzo, promozione a dama che termina il turno, sconfitta
   per assenza di mosse legali, patta dopo troppe mosse senza catture.
