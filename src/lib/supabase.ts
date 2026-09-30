@@ -20,3 +20,19 @@ export interface RoomRow {
   rematch_of: string | null
   updated_at: string
 }
+
+/** Stanze da 2, 3 o più giocatori (Briscola, Scopa, Poker): un posto per giocatore invece di host/guest fissi. */
+export interface Seat {
+  id: string
+  name: string
+}
+
+export interface GameRoomRow {
+  code: string
+  game: 'briscola' | 'scopa' | 'poker'
+  max_players: number
+  seats: Seat[]
+  state: unknown | null
+  winner: unknown | null
+  updated_at: string
+}

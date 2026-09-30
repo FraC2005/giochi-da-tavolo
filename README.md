@@ -1,13 +1,13 @@
 # Arcade da tavolo
 
-Sito vetrina dove scegli **Dama**, **Scacchi** o **Tris** e giochi contro un amico: sullo stesso schermo a turni,
-oppure online da case diverse con un codice stanza. Nessuna registrazione. Ogni gioco ha anche un tutorial
-guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di DaisyUI.
+Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris** o **Briscola** e giochi contro un amico: sullo stesso
+schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione. Ogni gioco ha anche
+un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di DaisyUI.
 
 Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
-scacchi, motore della dama scritto da zero. Il gioco online usa **Supabase** (database Postgres gratuito con
-sincronizzazione in tempo reale), perché **Netlify ospita solo siti statici**: non può far girare un backend
-Django o un server con WebSocket persistenti.
+scacchi, tutti gli altri motori (dama, tris, briscola) scritti da zero per questo progetto. Il gioco online usa
+**Supabase** (database Postgres gratuito con sincronizzazione in tempo reale), perché **Netlify ospita solo siti
+statici**: non può far girare un backend Django o un server con WebSocket persistenti.
 
 ## Avvio in locale
 
@@ -32,8 +32,13 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
   per assenza di mosse legali, patta dopo troppe mosse senza catture.
 - **Tris**: il classico 3×3, motore scritto per questo progetto (`src/games/tris/engine.ts`, con test in
   `engine.test.ts`) — X inizia sempre, evidenzia la tripletta vincente, pareggio se la griglia si riempie.
+- **Briscola**: mazzo italiano da 40 carte (`src/games/briscola/engine.ts`, con test in `engine.test.ts`), in 2
+  giocatori (testa a testa) o in 4 (due coppie, compagni seduti l'uno di fronte all'altro): nessun obbligo di
+  seguire il seme, forza e punteggio delle carte secondo le regole classiche, pesca dal mazzo dopo ogni mano.
 - **Online**: crea una stanza (codice a 5 caratteri) o entra con un codice; la partita si sincronizza in tempo
-  reale tramite Supabase. Rivincita con i colori invertiti senza cambiare stanza.
+  reale tramite Supabase. Dama, Scacchi e Tris sono sempre 1 contro 1 (stanza "host/guest"); Briscola può avere
+  fino a 4 posti, uno per giocatore, nella stessa stanza. Rivincita senza cambiare stanza (per Dama/Scacchi/Tris
+  con i colori invertiti).
 - **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
   tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
   un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in
@@ -88,6 +93,34 @@ alter table rooms drop constraint rooms_game_check;
 alter table rooms add constraint rooms_game_check check (game in ('chess', 'checkers', 'tris'));
 ```
 
+Briscola (e in futuro Scopa e Poker) usa una seconda tabella, `game_rooms`, perché può avere più di 2 giocatori
+nella stessa stanza: un "posto" (seat) per giocatore invece dei soli `host`/`guest`. Eseguila anche questa
+nello stesso SQL Editor:
+
+```sql
+create table game_rooms (
+  code text primary key,
+  game text not null check (game in ('briscola', 'scopa', 'poker')),
+  max_players int not null check (max_players between 2 and 8),
+  seats jsonb not null default '[]',
+  state jsonb,
+  winner jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create trigger game_rooms_touch_updated_at before update on game_rooms
+  for each row execute function touch_updated_at();
+
+alter table game_rooms enable row level security;
+
+create policy "chiunque legge" on game_rooms for select using (true);
+create policy "chiunque crea" on game_rooms for insert with check (true);
+create policy "chiunque aggiorna" on game_rooms for update using (true);
+
+alter publication supabase_realtime add table game_rooms;
+```
+
 3. In **Project Settings → API**, copia "Project URL" e la chiave "anon public".
 4. Crea un file `.env.local` nella cartella del progetto (copia `.env.example`) e incolla i due valori:
 
@@ -122,9 +155,12 @@ src/
     chess/      engine.ts (involucro su chess.js), useChessGame.ts, ChessBoard.vue, PromotionPicker.vue
     checkers/   engine.ts (motore scritto da zero), useCheckersGame.ts, CheckersBoard.vue
     tris/       engine.ts (motore scritto da zero), useTrisGame.ts, TrisBoard.vue, rules.ts (tutorial)
+    briscola/   engine.ts (2 o 4 giocatori), useBriscolaGame.ts, BriscolaTable.vue, rules.ts (tutorial)
+    cards/      mazzo di carte italiane condiviso (italianDeck.ts) e componente carta generico (PlayingCard.vue)
     rules.ts    mappa gioco → passi del tutorial guidato, usata da GameMenuView
-  components/   RoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi
-  lib/          player.ts (identità anonima nel browser), supabase.ts, onlineRoom.ts (stanze in tempo reale), tour.ts (tipo TourStep)
+  components/   RoomLobby, SeatRoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi
+  lib/          player.ts (identità anonima), supabase.ts, onlineRoom.ts (stanze 1v1), onlineRoomMulti.ts
+                (stanze con più posti, per Briscola/Scopa/Poker), tour.ts (tipo TourStep)
   views/        HomeView, GameMenuView, e Local/OnlineView per ciascun gioco
 ```
 
