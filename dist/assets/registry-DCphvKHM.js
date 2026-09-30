@@ -1,1 +1,0 @@
-const e=[{id:"checkers",slug:"dama",title:"Dama",tagline:"Cattura obbligata, catture multiple, promozione a dama.",glyph:"⛀",accent:["#ffd166","#ff8fb3"]},{id:"chess",slug:"scacchi",title:"Scacchi",tagline:"Regole ufficiali complete: arrocco, en passant, scacco matto.",glyph:"♞",accent:["#8ecae6","#b591ff"]}],t=a=>e.find(c=>c.id===a);export{e as G,t as g};

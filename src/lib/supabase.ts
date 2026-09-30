@@ -9,7 +9,7 @@ export const supabase: SupabaseClient | null = onlineAvailable ? createClient(ur
 
 export interface RoomRow {
   code: string
-  game: 'chess' | 'checkers'
+  game: 'chess' | 'checkers' | 'tris'
   state: string
   turn: string
   host_id: string

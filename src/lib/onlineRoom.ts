@@ -21,7 +21,7 @@ function must() {
  * Gestisce una stanza di gioco online: creazione, ingresso, sincronizzazione in tempo reale e rivincita.
  * `T` è lo stato del gioco specifico (mosse per gli scacchi, l'intero stato per la dama).
  */
-export function useOnlineRoom<T>(game: 'chess' | 'checkers', initialGameState: () => T) {
+export function useOnlineRoom<T>(game: 'chess' | 'checkers' | 'tris', initialGameState: () => T) {
   const me = playerId()
   const code: Ref<string | null> = ref(null)
   const row = ref<RoomRow | null>(null)
@@ -148,9 +148,14 @@ export function useOnlineRoom<T>(game: 'chess' | 'checkers', initialGameState: (
   return { code, row, error, connecting, youAre, yourColor, yourName, opponentName, status, gameState, create, join, pushState, rematch, leave, me }
 }
 
-export function shareUrl(routeName: 'chess-room' | 'checkers-room', code: string): string {
-  const path = routeName === 'chess-room' ? 'scacchi' : 'dama'
-  return `${window.location.origin}/${path}/online/${code}`
+const ROOM_PATH: Record<'chess-room' | 'checkers-room' | 'tris-room', string> = {
+  'chess-room': 'scacchi',
+  'checkers-room': 'dama',
+  'tris-room': 'tris',
+}
+
+export function shareUrl(routeName: 'chess-room' | 'checkers-room' | 'tris-room', code: string): string {
+  return `${window.location.origin}/${ROOM_PATH[routeName]}/online/${code}`
 }
 
 export function useCountdownCopy() {

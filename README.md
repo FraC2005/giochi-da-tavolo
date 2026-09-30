@@ -1,7 +1,8 @@
-# Dama & Scacchi
+# Arcade da tavolo
 
-Sito vetrina dove scegli **Dama** o **Scacchi** e giochi contro un amico: sullo stesso schermo a turni, oppure
-online da case diverse con un codice stanza. Nessuna registrazione.
+Sito vetrina dove scegli **Dama**, **Scacchi** o **Tris** e giochi contro un amico: sullo stesso schermo a turni,
+oppure online da case diverse con un codice stanza. Nessuna registrazione. Ogni gioco ha anche un tutorial
+guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di DaisyUI.
 
 Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
 scacchi, motore della dama scritto da zero. Il gioco online usa **Supabase** (database Postgres gratuito con
@@ -29,8 +30,14 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
 - **Dama**: motore scritto per questo progetto (`src/games/checkers/engine.ts`, con test in `engine.test.ts`) —
   8×8, cattura obbligata, catture multiple con lo stesso pezzo, promozione a dama che termina il turno, sconfitta
   per assenza di mosse legali, patta dopo troppe mosse senza catture.
+- **Tris**: il classico 3×3, motore scritto per questo progetto (`src/games/tris/engine.ts`, con test in
+  `engine.test.ts`) — X inizia sempre, evidenzia la tripletta vincente, pareggio se la griglia si riempie.
 - **Online**: crea una stanza (codice a 5 caratteri) o entra con un codice; la partita si sincronizza in tempo
   reale tramite Supabase. Rivincita con i colori invertiti senza cambiare stanza.
+- **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
+  tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
+  un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in
+  `src/games/rules.ts`.
 
 ## Configurare Supabase per il gioco online
 
@@ -40,7 +47,7 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
 ```sql
 create table rooms (
   code text primary key,
-  game text not null check (game in ('chess', 'checkers')),
+  game text not null check (game in ('chess', 'checkers', 'tris')),
   state jsonb not null,
   host_id text not null,
   guest_id text,
@@ -70,6 +77,15 @@ create policy "chiunque crea" on rooms for insert with check (true);
 create policy "chiunque aggiorna" on rooms for update using (true);
 
 alter publication supabase_realtime add table rooms;
+```
+
+Se hai già un progetto Supabase creato prima dell'aggiunta del Tris, il vincolo sulla colonna `game` va
+aggiornato per accettare anche `'tris'` (il nome del vincolo può variare, controllalo con `\d rooms` nell'SQL
+Editor se il comando sotto fallisce):
+
+```sql
+alter table rooms drop constraint rooms_game_check;
+alter table rooms add constraint rooms_game_check check (game in ('chess', 'checkers', 'tris'));
 ```
 
 3. In **Project Settings → API**, copia "Project URL" e la chiave "anon public".
@@ -105,8 +121,10 @@ src/
   games/
     chess/      engine.ts (involucro su chess.js), useChessGame.ts, ChessBoard.vue, PromotionPicker.vue
     checkers/   engine.ts (motore scritto da zero), useCheckersGame.ts, CheckersBoard.vue
-  components/   RoomLobby, GameOverPanel, StatusBar, BackPill — condivisi tra i due giochi
-  lib/          player.ts (identità anonima nel browser), supabase.ts, onlineRoom.ts (stanze in tempo reale)
+    tris/       engine.ts (motore scritto da zero), useTrisGame.ts, TrisBoard.vue, rules.ts (tutorial)
+    rules.ts    mappa gioco → passi del tutorial guidato, usata da GameMenuView
+  components/   RoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi
+  lib/          player.ts (identità anonima nel browser), supabase.ts, onlineRoom.ts (stanze in tempo reale), tour.ts (tipo TourStep)
   views/        HomeView, GameMenuView, e Local/OnlineView per ciascun gioco
 ```
 

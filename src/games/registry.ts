@@ -5,7 +5,7 @@
  * per l'icona del gioco e per le sue caselle scure sulla scacchiera.
  */
 export interface GameDef {
-  id: 'chess' | 'checkers'
+  id: 'chess' | 'checkers' | 'tris'
   slug: string
   title: string
   tagline: string
@@ -16,6 +16,7 @@ export interface GameDef {
 export const GAMES: GameDef[] = [
   { id: 'checkers', slug: 'dama', title: 'Dama', tagline: 'Cattura obbligata, catture multiple, promozione a dama.', glyph: '⛀', accent: ['#ffd166', '#ff8fb3'] },
   { id: 'chess', slug: 'scacchi', title: 'Scacchi', tagline: 'Regole ufficiali complete: arrocco, en passant, scacco matto.', glyph: '♞', accent: ['#8ecae6', '#b591ff'] },
+  { id: 'tris', slug: 'tris', title: 'Tris', tagline: 'Tre in fila per vincere: il classico gioco della X e O.', glyph: '⭕', accent: ['#34c98a', '#8ecae6'] },
 ]
 
 export const gameBySlug = (slug: string) => GAMES.find((g) => g.slug === slug)
