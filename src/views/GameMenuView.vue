@@ -7,7 +7,7 @@ import { gameById } from '@/games/registry'
 import { rulesByGame } from '@/games/rules'
 import { supabaseReady } from '@/lib/onlineRoom'
 
-const props = defineProps<{ game: 'chess' | 'checkers' | 'tris' | 'briscola' }>()
+const props = defineProps<{ game: 'chess' | 'checkers' | 'tris' | 'briscola' | 'scopa' }>()
 const router = useRouter()
 const meta = computed(() => gameById(props.game))
 const iconBg = computed(() => `linear-gradient(135deg, ${meta.value.accent[0]}, ${meta.value.accent[1]})`)

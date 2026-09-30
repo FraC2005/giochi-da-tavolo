@@ -5,10 +5,12 @@
  */
 import type { GameDef } from './registry'
 import { briscolaRules } from './briscola/rules'
+import { scopaRules } from './scopa/rules'
 import { trisRules } from './tris/rules'
 import type { TourStep } from '@/lib/tour'
 
 export const rulesByGame: Partial<Record<GameDef['id'], TourStep[]>> = {
   tris: trisRules,
   briscola: briscolaRules,
+  scopa: scopaRules,
 }

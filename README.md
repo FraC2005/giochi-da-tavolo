@@ -1,13 +1,13 @@
 # Arcade da tavolo
 
-Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris** o **Briscola** e giochi contro un amico: sullo stesso
-schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione. Ogni gioco ha anche
-un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di DaisyUI.
+Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris**, **Briscola** o **Scopa** e giochi contro un amico:
+sullo stesso schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione. Ogni
+gioco ha anche un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di DaisyUI.
 
 Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
-scacchi, tutti gli altri motori (dama, tris, briscola) scritti da zero per questo progetto. Il gioco online usa
-**Supabase** (database Postgres gratuito con sincronizzazione in tempo reale), perché **Netlify ospita solo siti
-statici**: non può far girare un backend Django o un server con WebSocket persistenti.
+scacchi, tutti gli altri motori (dama, tris, briscola, scopa) scritti da zero per questo progetto. Il gioco
+online usa **Supabase** (database Postgres gratuito con sincronizzazione in tempo reale), perché **Netlify
+ospita solo siti statici**: non può far girare un backend Django o un server con WebSocket persistenti.
 
 ## Avvio in locale
 
@@ -35,10 +35,14 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
 - **Briscola**: mazzo italiano da 40 carte (`src/games/briscola/engine.ts`, con test in `engine.test.ts`), in 2
   giocatori (testa a testa) o in 4 (due coppie, compagni seduti l'uno di fronte all'altro): nessun obbligo di
   seguire il seme, forza e punteggio delle carte secondo le regole classiche, pesca dal mazzo dopo ogni mano.
+- **Scopa**: stesso mazzo italiano da 40 carte (`src/games/scopa/engine.ts`, con test in `engine.test.ts`), in 2
+  giocatori o in 4 (due coppie): presa obbligatoria quando possibile (valore uguale o combinazioni che sommano
+  al valore giocato), scope, e punteggio di fine mano su carte prese, denari, settebello e primiera. Una sola
+  mano completa del mazzo (non si gioca a più mani fino a un punteggio target).
 - **Online**: crea una stanza (codice a 5 caratteri) o entra con un codice; la partita si sincronizza in tempo
-  reale tramite Supabase. Dama, Scacchi e Tris sono sempre 1 contro 1 (stanza "host/guest"); Briscola può avere
-  fino a 4 posti, uno per giocatore, nella stessa stanza. Rivincita senza cambiare stanza (per Dama/Scacchi/Tris
-  con i colori invertiti).
+  reale tramite Supabase. Dama, Scacchi e Tris sono sempre 1 contro 1 (stanza "host/guest"); Briscola e Scopa
+  possono avere fino a 4 posti, uno per giocatore, nella stessa stanza. Rivincita senza cambiare stanza (per
+  Dama/Scacchi/Tris con i colori invertiti).
 - **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
   tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
   un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in
@@ -93,9 +97,9 @@ alter table rooms drop constraint rooms_game_check;
 alter table rooms add constraint rooms_game_check check (game in ('chess', 'checkers', 'tris'));
 ```
 
-Briscola (e in futuro Scopa e Poker) usa una seconda tabella, `game_rooms`, perché può avere più di 2 giocatori
-nella stessa stanza: un "posto" (seat) per giocatore invece dei soli `host`/`guest`. Eseguila anche questa
-nello stesso SQL Editor:
+Briscola e Scopa (e in futuro Poker) usano una seconda tabella, `game_rooms`, perché possono avere più di 2
+giocatori nella stessa stanza: un "posto" (seat) per giocatore invece dei soli `host`/`guest`. Eseguila anche
+questa nello stesso SQL Editor:
 
 ```sql
 create table game_rooms (
@@ -156,6 +160,7 @@ src/
     checkers/   engine.ts (motore scritto da zero), useCheckersGame.ts, CheckersBoard.vue
     tris/       engine.ts (motore scritto da zero), useTrisGame.ts, TrisBoard.vue, rules.ts (tutorial)
     briscola/   engine.ts (2 o 4 giocatori), useBriscolaGame.ts, BriscolaTable.vue, rules.ts (tutorial)
+    scopa/      engine.ts (2 o 4 giocatori), useScopaGame.ts, ScopaTable.vue, rules.ts (tutorial)
     cards/      mazzo di carte italiane condiviso (italianDeck.ts) e componente carta generico (PlayingCard.vue)
     rules.ts    mappa gioco → passi del tutorial guidato, usata da GameMenuView
   components/   RoomLobby, SeatRoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi

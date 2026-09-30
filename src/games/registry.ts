@@ -5,7 +5,7 @@
  * per l'icona del gioco e per le sue caselle scure sulla scacchiera.
  */
 export interface GameDef {
-  id: 'chess' | 'checkers' | 'tris' | 'briscola'
+  id: 'chess' | 'checkers' | 'tris' | 'briscola' | 'scopa'
   slug: string
   title: string
   tagline: string
@@ -18,6 +18,7 @@ export const GAMES: GameDef[] = [
   { id: 'chess', slug: 'scacchi', title: 'Scacchi', tagline: 'Regole ufficiali complete: arrocco, en passant, scacco matto.', glyph: '♞', accent: ['#8ecae6', '#b591ff'] },
   { id: 'tris', slug: 'tris', title: 'Tris', tagline: 'Tre in fila per vincere: il classico gioco della X e O.', glyph: '⭕', accent: ['#34c98a', '#8ecae6'] },
   { id: 'briscola', slug: 'briscola', title: 'Briscola', tagline: 'Il classico gioco di carte italiano, in 2 o in 4 a coppie.', glyph: '🪙', accent: ['#d1972f', '#e0526b'] },
+  { id: 'scopa', slug: 'scopa', title: 'Scopa', tagline: 'Fai incetta di carte, settebello e scope, in 2 o in 4 a coppie.', glyph: '🧹', accent: ['#4caf7d', '#8ecae6'] },
 ]
 
 export const gameBySlug = (slug: string) => GAMES.find((g) => g.slug === slug)
