@@ -1,13 +1,14 @@
 # Arcade da tavolo
 
-Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris**, **Briscola** o **Scopa** e giochi contro un amico:
-sullo stesso schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione. Ogni
-gioco ha anche un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di DaisyUI.
+Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris**, **Briscola**, **Scopa** o **Poker** e giochi contro un
+amico: sullo stesso schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione.
+Ogni gioco ha anche un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di
+DaisyUI.
 
 Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
-scacchi, tutti gli altri motori (dama, tris, briscola, scopa) scritti da zero per questo progetto. Il gioco
-online usa **Supabase** (database Postgres gratuito con sincronizzazione in tempo reale), perché **Netlify
-ospita solo siti statici**: non può far girare un backend Django o un server con WebSocket persistenti.
+scacchi, tutti gli altri motori (dama, tris, briscola, scopa, poker) scritti da zero per questo progetto. Il
+gioco online usa **Supabase** (database Postgres gratuito con sincronizzazione in tempo reale), perché
+**Netlify ospita solo siti statici**: non può far girare un backend Django o un server con WebSocket persistenti.
 
 ## Avvio in locale
 
@@ -39,10 +40,15 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
   giocatori o in 4 (due coppie): presa obbligatoria quando possibile (valore uguale o combinazioni che sommano
   al valore giocato), scope, e punteggio di fine mano su carte prese, denari, settebello e primiera. Una sola
   mano completa del mazzo (non si gioca a più mani fino a un punteggio target).
+- **Poker**: mazzo francese da 52 carte (`src/games/poker/engine.ts` per le puntate e i piatti laterali,
+  `handEval.ts` per il valore delle mani, entrambi con test), da 2 a 6 giocatori, due varianti a scelta di chi
+  crea la partita: **Texas Hold'em** (2 carte private, 5 comuni, 4 giri di puntate) e **Poker all'italiana**
+  (5 carte private, un cambio carte, 2 giri di puntate). Puntate no-limit con piatti laterali corretti per gli
+  all-in; una sola mano per partita (stack e bui ripartono da zero a ogni rivincita, non è un torneo).
 - **Online**: crea una stanza (codice a 5 caratteri) o entra con un codice; la partita si sincronizza in tempo
-  reale tramite Supabase. Dama, Scacchi e Tris sono sempre 1 contro 1 (stanza "host/guest"); Briscola e Scopa
-  possono avere fino a 4 posti, uno per giocatore, nella stessa stanza. Rivincita senza cambiare stanza (per
-  Dama/Scacchi/Tris con i colori invertiti).
+  reale tramite Supabase. Dama, Scacchi e Tris sono sempre 1 contro 1 (stanza "host/guest"); Briscola, Scopa e
+  Poker possono avere più posti (fino a 4 per Briscola/Scopa, fino a 6 per il Poker), uno per giocatore, nella
+  stessa stanza. Rivincita senza cambiare stanza (per Dama/Scacchi/Tris con i colori invertiti).
 - **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
   tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
   un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in
@@ -161,7 +167,10 @@ src/
     tris/       engine.ts (motore scritto da zero), useTrisGame.ts, TrisBoard.vue, rules.ts (tutorial)
     briscola/   engine.ts (2 o 4 giocatori), useBriscolaGame.ts, BriscolaTable.vue, rules.ts (tutorial)
     scopa/      engine.ts (2 o 4 giocatori), useScopaGame.ts, ScopaTable.vue, rules.ts (tutorial)
-    cards/      mazzo di carte italiane condiviso (italianDeck.ts) e componente carta generico (PlayingCard.vue)
+    poker/      engine.ts (puntate, piatti laterali), handEval.ts (valore delle mani), usePokerGame.ts,
+                PokerTable.vue, rules.ts (tutorial) — 2-6 giocatori, Texas Hold'em o all'italiana
+    cards/      mazzo italiano (italianDeck.ts), mazzo francese (frenchDeck.ts), mescolamento condiviso
+                (shuffle.ts), componente carta generico (PlayingCard.vue)
     rules.ts    mappa gioco → passi del tutorial guidato, usata da GameMenuView
   components/   RoomLobby, SeatRoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi
   lib/          player.ts (identità anonima), supabase.ts, onlineRoom.ts (stanze 1v1), onlineRoomMulti.ts
@@ -177,3 +186,8 @@ src/
   volta tra amici.
 - Il motore della dama implementa le regole anglo-americane classiche (non le varianti internazionali con le
   "dame volanti" o la regola della cattura massima obbligatoria).
+- Il Poker è semplificato rispetto a un tavolo da casinò: un rilancio "corto" (all-in per meno del rilancio
+  minimo) riapre comunque l'azione per tutti, invece di restare limitato al solo pareggio come vorrebbe la
+  regola rigorosa; allo showdown si vedono la categoria della mano di ciascuno e quanto ha vinto, non le carte
+  esatte degli avversari. Si gioca una sola mano per partita (stack e bui ripartono da zero a ogni rivincita),
+  non un vero torneo con bui crescenti.
