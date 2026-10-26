@@ -75,6 +75,11 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
   (`RoguelikeBoard.vue`), non su `<canvas>`. Partita salvata in automatico nel browser (`localStorage`, non su
   Supabase: è una partita personale, non serve condividerla tra dispositivi) — alla riapertura propone di
   continuarla.
+- **Reparto 4**: survival horror 3D in solitaria, realizzato con Godot 4 e pubblicato come export WebAssembly
+  statico nel portale (`godot/reparto4/`). Si esplora un ospedale abbandonato, si raccolgono un badge, un
+  fusibile e documenti, mentre una minaccia pattuglia e reagisce a rumore e luce. Quattro indizi ricostruiscono
+  la scomparsa di Luca Valli; il diario con `J` conserva i documenti trovati. Rigenera il gioco con
+  `npm run export:reparto4` dopo aver installato Godot 4.7 e il relativo template Web.
 - **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
   tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
   un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in

@@ -5,7 +5,7 @@
  * per l'icona del gioco e per le sue caselle scure sulla scacchiera.
  */
 export interface GameDef {
-  id: 'chess' | 'checkers' | 'tris' | 'briscola' | 'scopa' | 'poker' | 'breakout' | 'platformer' | 'roguelike'
+  id: 'chess' | 'checkers' | 'tris' | 'briscola' | 'scopa' | 'poker' | 'breakout' | 'platformer' | 'roguelike' | 'ultimopiano' | 'reparto4'
   slug: string
   title: string
   tagline: string
@@ -23,6 +23,8 @@ export const GAMES: GameDef[] = [
   { id: 'breakout', slug: 'breakout', title: 'Breakout', tagline: 'Spacca tutti i mattoni senza far cadere la pallina. Con classifica.', glyph: '🧱', accent: ['#ff8f5d', '#ffd166'] },
   { id: 'platformer', slug: 'platformer', title: 'Platformer', tagline: 'Salta, schiaccia i nemici e raggiungi la bandiera. Con classifica.', glyph: '🏃', accent: ['#8ecae6', '#34c98a'] },
   { id: 'roguelike', slug: 'dungeon', title: 'Dungeon ASCII', tagline: 'Dungeon generato ogni volta diverso, a turni, con salvataggio.', glyph: '🗝️', accent: ['#b591ff', '#241832'] },
+  { id: 'ultimopiano', slug: 'ultimo-piano', title: "L'Ultimo Piano", tagline: 'Horror psicologico in prima persona: un appartamento, una memoria rimossa.', glyph: '🕯️', accent: ['#c89a5a', '#1a1510'] },
+  { id: 'reparto4', slug: 'reparto-4', title: 'Reparto 4', tagline: 'Survival horror 3D: esplora il reparto, raccogli prove e trova una via d’uscita.', glyph: '🔦', accent: ['#4a90d9', '#0a0e14'] },
 ]
 
 export const gameBySlug = (slug: string) => GAMES.find((g) => g.slug === slug)

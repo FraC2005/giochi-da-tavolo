@@ -13,6 +13,8 @@ export default createRouter({
     { path: '/breakout', name: 'breakout', component: () => import('@/views/breakout/LocalView.vue') },
     { path: '/platformer', name: 'platformer', component: () => import('@/views/platformer/LocalView.vue') },
     { path: '/dungeon', name: 'roguelike', component: () => import('@/views/roguelike/LocalView.vue') },
+    { path: '/ultimo-piano', name: 'ultimopiano', component: () => import('@/views/ultimopiano/LocalView.vue') },
+    { path: '/reparto-4', name: 'reparto4', component: () => import('@/views/reparto4/LocalView.vue') },
     { path: '/dama/locale', name: 'checkers-local', component: () => import('@/views/checkers/LocalView.vue') },
     { path: '/scacchi/locale', name: 'chess-local', component: () => import('@/views/chess/LocalView.vue') },
     { path: '/tris/locale', name: 'tris-local', component: () => import('@/views/tris/LocalView.vue') },
