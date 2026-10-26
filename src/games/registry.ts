@@ -5,7 +5,7 @@
  * per l'icona del gioco e per le sue caselle scure sulla scacchiera.
  */
 export interface GameDef {
-  id: 'chess' | 'checkers' | 'tris' | 'briscola' | 'scopa' | 'poker' | 'breakout'
+  id: 'chess' | 'checkers' | 'tris' | 'briscola' | 'scopa' | 'poker' | 'breakout' | 'platformer' | 'roguelike'
   slug: string
   title: string
   tagline: string
@@ -21,6 +21,8 @@ export const GAMES: GameDef[] = [
   { id: 'scopa', slug: 'scopa', title: 'Scopa', tagline: 'Fai incetta di carte, settebello e scope, in 2 o in 4 a coppie.', glyph: '🧹', accent: ['#4caf7d', '#8ecae6'] },
   { id: 'poker', slug: 'poker', title: 'Poker', tagline: "Texas Hold'em o all'italiana a 5 carte, da 2 a 6 giocatori.", glyph: '♠️', accent: ['#241832', '#e0526b'] },
   { id: 'breakout', slug: 'breakout', title: 'Breakout', tagline: 'Spacca tutti i mattoni senza far cadere la pallina. Con classifica.', glyph: '🧱', accent: ['#ff8f5d', '#ffd166'] },
+  { id: 'platformer', slug: 'platformer', title: 'Platformer', tagline: 'Salta, schiaccia i nemici e raggiungi la bandiera. Con classifica.', glyph: '🏃', accent: ['#8ecae6', '#34c98a'] },
+  { id: 'roguelike', slug: 'dungeon', title: 'Dungeon ASCII', tagline: 'Dungeon generato ogni volta diverso, a turni, con salvataggio.', glyph: '🗝️', accent: ['#b591ff', '#241832'] },
 ]
 
 export const gameBySlug = (slug: string) => GAMES.find((g) => g.slug === slug)

@@ -11,6 +11,8 @@ export default createRouter({
     { path: '/scopa', name: 'scopa-menu', component: () => import('@/views/GameMenuView.vue'), props: { game: 'scopa' } },
     { path: '/poker', name: 'poker-menu', component: () => import('@/views/GameMenuView.vue'), props: { game: 'poker' } },
     { path: '/breakout', name: 'breakout', component: () => import('@/views/breakout/LocalView.vue') },
+    { path: '/platformer', name: 'platformer', component: () => import('@/views/platformer/LocalView.vue') },
+    { path: '/dungeon', name: 'roguelike', component: () => import('@/views/roguelike/LocalView.vue') },
     { path: '/dama/locale', name: 'checkers-local', component: () => import('@/views/checkers/LocalView.vue') },
     { path: '/scacchi/locale', name: 'chess-local', component: () => import('@/views/chess/LocalView.vue') },
     { path: '/tris/locale', name: 'tris-local', component: () => import('@/views/tris/LocalView.vue') },
