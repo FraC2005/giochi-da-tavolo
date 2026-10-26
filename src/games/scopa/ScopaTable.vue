@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import CardThemePicker from '../cards/CardThemePicker.vue'
 import PlayingCard from '../cards/PlayingCard.vue'
-import { RANK_LABEL, sameCard, SUIT_COLOR, SUIT_GLYPH, SUIT_LABEL, type Card } from '../cards/italianDeck'
+import { cardTheme, setCardTheme } from '../cards/cardTheme'
+import { sameCard, type Card } from '../cards/italianDeck'
 import type { ScopaState } from './engine'
 
 const props = defineProps<{
@@ -18,10 +20,18 @@ const myHand = computed(() => props.state.hands[props.seat] ?? [])
 const otherSeats = computed(() => props.state.hands.map((_, i) => i).filter((i) => i !== props.seat))
 const nameFor = (i: number) => props.names[i] ?? `Giocatore ${i + 1}`
 const isSelected = (c: Card) => !!props.selectedCard && sameCard(props.selectedCard, c)
+
+const theme = ref(cardTheme())
+function chooseTheme(t: typeof theme.value) {
+  theme.value = t
+  setCardTheme(t)
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
+    <div class="flex justify-center"><CardThemePicker :model-value="theme" @update:model-value="chooseTheme" /></div>
+
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <div
         v-for="i in otherSeats" :key="i"
@@ -38,7 +48,7 @@ const isSelected = (c: Card) => !!props.selectedCard && sameCard(props.selectedC
       <div class="flex min-h-20 flex-wrap justify-center gap-2">
         <PlayingCard
           v-for="c in state.table" :key="`${c.suit}-${c.rank}`"
-          :rank-label="RANK_LABEL[c.rank]" :suit-glyph="SUIT_GLYPH[c.suit]" :suit-label="SUIT_LABEL[c.suit]" :color="SUIT_COLOR[c.suit]" small
+          :rank="c.rank" :suit="c.suit" deck="italian" :theme="theme" small
         />
         <p v-if="state.table.length === 0" class="self-center text-xs opacity-40">Tavolo vuoto</p>
       </div>
@@ -54,7 +64,7 @@ const isSelected = (c: Card) => !!props.selectedCard && sameCard(props.selectedC
         >
           <PlayingCard
             v-for="c in option" :key="`${c.suit}-${c.rank}`"
-            :rank-label="RANK_LABEL[c.rank]" :suit-glyph="SUIT_GLYPH[c.suit]" :suit-label="SUIT_LABEL[c.suit]" :color="SUIT_COLOR[c.suit]" small
+            :rank="c.rank" :suit="c.suit" deck="italian" :theme="theme" small
           />
         </button>
       </div>
@@ -65,7 +75,7 @@ const isSelected = (c: Card) => !!props.selectedCard && sameCard(props.selectedC
       <div class="flex flex-wrap justify-center gap-2.5">
         <PlayingCard
           v-for="c in myHand" :key="`${c.suit}-${c.rank}`"
-          :rank-label="RANK_LABEL[c.rank]" :suit-glyph="SUIT_GLYPH[c.suit]" :suit-label="SUIT_LABEL[c.suit]" :color="SUIT_COLOR[c.suit]"
+          :rank="c.rank" :suit="c.suit" deck="italian" :theme="theme"
           :interactive="interactive" :selected="isSelected(c)" @click="emit('select', c)"
         />
       </div>

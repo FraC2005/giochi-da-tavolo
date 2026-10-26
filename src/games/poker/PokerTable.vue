@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import PlayingCard from '../cards/PlayingCard.vue'
-import { RANK_LABEL, SUIT_COLOR, SUIT_GLYPH, SUIT_LABEL } from '../cards/frenchDeck'
 import { legalActions, totalPot, type LegalActions, type PokerState } from './engine'
 
 const props = defineProps<{
@@ -68,10 +67,7 @@ const phaseLabel: Record<string, string> = {
     <div v-if="state.variant === 'holdem'" class="rounded-box bg-base-200/70 p-4 shadow-inner">
       <p class="mb-2 text-center text-xs font-medium opacity-55">Carte comuni</p>
       <div class="flex min-h-20 flex-wrap justify-center gap-2">
-        <PlayingCard
-          v-for="c in state.community" :key="`${c.suit}-${c.rank}`"
-          :rank-label="RANK_LABEL[c.rank]" :suit-glyph="SUIT_GLYPH[c.suit]" :suit-label="SUIT_LABEL[c.suit]" :color="SUIT_COLOR[c.suit]"
-        />
+        <PlayingCard v-for="c in state.community" :key="`${c.suit}-${c.rank}`" :rank="c.rank" :suit="c.suit" deck="french" />
         <p v-if="state.community.length === 0" class="self-center text-xs opacity-40">Ancora nessuna carta comune</p>
       </div>
     </div>
@@ -84,7 +80,7 @@ const phaseLabel: Record<string, string> = {
       <div class="flex flex-wrap justify-center gap-2.5">
         <PlayingCard
           v-for="(c, i) in state.players[seat]?.hand ?? []" :key="`${c.suit}-${c.rank}-${i}`"
-          :rank-label="RANK_LABEL[c.rank]" :suit-glyph="SUIT_GLYPH[c.suit]" :suit-label="SUIT_LABEL[c.suit]" :color="SUIT_COLOR[c.suit]"
+          :rank="c.rank" :suit="c.suit" deck="french"
           :interactive="isExchange && interactive" :selected="discardChoice.includes(i)" @click="isExchange && interactive && toggleDiscard(i)"
         />
       </div>
