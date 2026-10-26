@@ -293,6 +293,27 @@ function computeSidePots(contributions: number[], folded: boolean[]): PotSlice[]
   return slices
 }
 
+const HIDDEN_CARD: Card = { suit: 'spades', rank: 2 }
+
+/**
+ * Proiezione dello stato per il posto `seat`: le mani degli altri e l'ordine del mazzo sono
+ * sostituiti da carte segnaposto (mai mostrate, serve solo a non far perdere la lunghezza degli
+ * array). A showdown le mani di chi non è passato vengono rivelate a tutti, come al tavolo vero;
+ * chi è passato ("folded") resta nascosto per sempre. Usata dal server online per non mandare a
+ * ciascun client le carte degli avversari prima del momento in cui sarebbero davvero visibili.
+ */
+export function viewForSeat(state: PokerState, seat: number): PokerState {
+  const revealAll = state.status === 'finished'
+  return {
+    ...state,
+    deck: state.deck.map(() => HIDDEN_CARD),
+    players: state.players.map((p, i) => ({
+      ...p,
+      hand: i === seat || (revealAll && !p.folded) ? p.hand : p.hand.map(() => HIDDEN_CARD),
+    })),
+  }
+}
+
 function resolveShowdown(state: PokerState): PokerState {
   const contributions = state.players.map((p) => p.contributed)
   const folded = state.players.map((p) => p.folded)

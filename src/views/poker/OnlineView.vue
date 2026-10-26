@@ -6,7 +6,7 @@ import GameOverPanel from '@/components/GameOverPanel.vue'
 import SeatRoomLobby from '@/components/SeatRoomLobby.vue'
 import StatusBar from '@/components/StatusBar.vue'
 import PokerTable from '@/games/poker/PokerTable.vue'
-import { createGame, type PlayerCount, type PokerResult, type PokerState, type PokerVariant } from '@/games/poker/engine'
+import type { PokerResult, PokerState, PokerVariant } from '@/games/poker/engine'
 import { usePokerGame } from '@/games/poker/usePokerGame'
 import { seatRoomShareUrl, seatRoomsReady, useSeatRoom } from '@/lib/onlineRoomMulti'
 import { useCountdownCopy } from '@/lib/onlineRoom'
@@ -16,21 +16,15 @@ const router = useRouter()
 const room = useSeatRoom<PokerState, PokerResult[]>('poker')
 const { copied, copy } = useCountdownCopy()
 
-// scelta valida solo per chi crea la stanza: chi entra con un codice gioca la variante già decisa
+// scelta valida solo per chi crea la stanza: chi entra con un codice gioca la variante già decisa dall'host
 const variant = ref<PokerVariant>('holdem')
-const makeInitial = (players: number) => createGame(variant.value, players as PlayerCount)
-// per la rivincita, si riusa sempre la variante della partita già in corso (non quella scelta localmente
-// da chi preme il pulsante, che potrebbe non essere stato lui a creare la stanza)
-const rematchInitial = (players: number) => createGame(g.state.value.variant, players as PlayerCount)
 
-// `onMove` scatta solo per le mosse giocate qui in locale, mai per la sincronizzazione da remoto.
-const g = usePokerGame(undefined, (state) => {
-  room.pushState(state, state.status === 'finished' ? state.results : null)
-})
+// la mossa è calcolata e applicata solo dal server (Edge Function): qui si mostra soltanto quello che arriva.
+const g = usePokerGame()
 
 watch(() => room.gameState.value, (state) => { if (state) g.setState(state) }, { immediate: true })
 watch(() => [room.seats.value.length, room.maxPlayers.value, room.status.value], () => {
-  if (room.status.value === 'lobby' && room.seats.value.length === room.maxPlayers.value) room.startIfFull(makeInitial)
+  if (room.status.value === 'lobby' && room.seats.value.length === room.maxPlayers.value) room.startIfFull({ variant: variant.value })
 }, { immediate: true })
 
 onMounted(() => {
@@ -70,11 +64,13 @@ const overDetail = computed(() => {
   return results.map((r) => `${room.playerNames.value[r.seat] ?? '—'}: +${r.amount}${r.categoryLabel ? ` (${r.categoryLabel})` : ''}`).join(' · ')
 })
 
-function fold() { if (interactive.value) g.act(room.mySeat.value, { type: 'fold' }) }
-function checkCall() { if (interactive.value) g.act(room.mySeat.value, { type: 'checkCall' }) }
-function raiseTo(amount: number) { if (interactive.value) g.act(room.mySeat.value, { type: 'raiseTo', amount }) }
-function discard(indices: number[]) { if (room.status.value === 'playing' && g.state.value.turn === room.mySeat.value) g.discard(room.mySeat.value, indices) }
-function rematch() { room.rematch(rematchInitial) }
+function fold() { if (interactive.value) room.sendMove({ action: { type: 'fold' } }) }
+function checkCall() { if (interactive.value) room.sendMove({ action: { type: 'checkCall' } }) }
+function raiseTo(amount: number) { if (interactive.value) room.sendMove({ action: { type: 'raiseTo', amount } }) }
+function discard(indices: number[]) { if (room.status.value === 'playing' && g.state.value.turn === room.mySeat.value) room.sendMove({ discardIndices: indices }) }
+// per la rivincita, si riusa sempre la variante della partita già in corso (non quella scelta localmente
+// da chi preme il pulsante, che potrebbe non essere stato lui a creare la stanza)
+function rematch() { room.rematch({ variant: g.state.value.variant }) }
 </script>
 
 <template>

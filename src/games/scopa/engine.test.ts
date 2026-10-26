@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../cards/italianDeck'
 import { cardId } from '../cards/italianDeck'
-import { createGame, legalCaptures, outcome, playCard, type ScopaState } from './engine'
+import { createGame, legalCaptures, outcome, playCard, viewForSeat, type ScopaState } from './engine'
 
 const card = (suit: Card['suit'], rank: Card['rank']): Card => ({ suit, rank })
 
@@ -196,5 +196,48 @@ describe('outcome', () => {
   it('returns null while the game is still in progress', () => {
     const game = stateWith({ hands: [[card('denari', 1)], []], table: [] })
     expect(outcome(game)).toBeNull()
+  })
+})
+
+describe('playCard guards against untrusted input (server-side use)', () => {
+  it('ignores a play out of turn', () => {
+    const game = stateWith({ hands: [[card('denari', 7)], [card('coppe', 3)]], table: [], turn: 0 })
+    const next = playCard(game, 1, card('coppe', 3), [])
+    expect(next).toBe(game)
+  })
+
+  it('ignores a card the seat does not actually hold', () => {
+    const game = stateWith({ hands: [[card('denari', 7)], [card('coppe', 3)]], table: [], turn: 0 })
+    const next = playCard(game, 0, card('bastoni', 5), [])
+    expect(next).toBe(game)
+  })
+
+  it('ignores a claimed capture that does not match any legal option', () => {
+    const game = stateWith({ hands: [[card('denari', 7)], [card('coppe', 3)]], table: [card('denari', 3), card('spade', 4)], turn: 0 })
+    // 7 non prende né il 3 né il 4 da solo né la coppia 3+4 (somma 7... in realtà la prende! usiamo una presa sbagliata esplicita)
+    const next = playCard(game, 0, card('denari', 7), [card('spade', 4)]) // il 4 solo non vale 7: presa inventata
+    expect(next).toBe(game)
+  })
+
+  it('ignores laying the card down when a capture was actually mandatory', () => {
+    const game = stateWith({ hands: [[card('denari', 7)], [card('coppe', 3)]], table: [card('spade', 7)], turn: 0 })
+    const next = playCard(game, 0, card('denari', 7), []) // il 7 di spade era prendibile: non si può posare
+    expect(next).toBe(game)
+  })
+})
+
+describe('viewForSeat', () => {
+  it('keeps the given seat\'s hand but masks every other hand and the deck order', () => {
+    const game = stateWith({
+      hands: [[card('denari', 7)], [card('coppe', 3)]],
+      table: [],
+      deck: [card('bastoni', 1), card('spade', 2)],
+    })
+    const view = viewForSeat(game, 0)
+    expect(view.hands[0]).toEqual(game.hands[0])
+    expect(view.hands[1]).not.toEqual(game.hands[1])
+    expect(view.hands[1]).toHaveLength(game.hands[1].length)
+    expect(view.deck).toHaveLength(game.deck.length)
+    expect(view.deck).not.toEqual(game.deck)
   })
 })

@@ -92,8 +92,29 @@ export function legalCaptures(table: Card[], rank: Rank): Card[][] {
   return sumSubsets(table, rank)
 }
 
-/** Applica la giocata di `seat` (deve essere il suo turno, avere la carta in mano, e `capture` deve essere una delle opzioni di legalCaptures). */
+function sameCardSet(a: Card[], b: Card[]): boolean {
+  if (a.length !== b.length) return false
+  const remaining = b.slice()
+  for (const card of a) {
+    const idx = remaining.findIndex((c) => sameCard(c, card))
+    if (idx === -1) return false
+    remaining.splice(idx, 1)
+  }
+  return true
+}
+
+/**
+ * Applica la giocata di `seat`: si auto-verifica (turno, carta davvero in mano, `capture` è
+ * davvero una delle opzioni legali per quella carta) e restituisce lo stato inalterato se la
+ * giocata non è legale, invece di fidarsi del chiamante. Necessario perché, nella modalità
+ * online, questa funzione viene invocata da un server (Edge Function) su input di un client che
+ * potrebbe non essere la UI onesta del gioco.
+ */
 export function playCard(state: ScopaState, seat: number, card: Card, capture: Card[]): ScopaState {
+  if (state.status !== 'playing' || state.turn !== seat || !state.hands[seat].some((c) => sameCard(c, card))) return state
+  const options = legalCaptures(state.table, card.rank)
+  const captureIsLegal = options.length === 0 ? capture.length === 0 : options.some((o) => sameCardSet(o, capture))
+  if (!captureIsLegal) return state
   const hands = state.hands.map((hand, i) => (i === seat ? hand.filter((c) => !sameCard(c, card)) : hand))
   const capturing = capture.length > 0
   const table = capturing ? state.table.filter((t) => !capture.some((c) => sameCard(c, t))) : [...state.table, card]
@@ -142,6 +163,21 @@ function primieraScore(cards: Card[]): number {
     total += Math.max(...bySuit.map((c) => PRIMIERA_VALUE[c.rank]))
   }
   return total
+}
+
+const HIDDEN_CARD: Card = { suit: 'spade', rank: 2 }
+
+/**
+ * Proiezione dello stato per il posto `seat`: le mani degli altri e l'ordine del mazzo sono
+ * sostituiti da carte segnaposto (mai mostrate, serve solo a non far perdere la lunghezza degli
+ * array). Usata dal server online per non mandare a ciascun client le carte degli avversari.
+ */
+export function viewForSeat(state: ScopaState, seat: number): ScopaState {
+  return {
+    ...state,
+    deck: state.deck.map(() => HIDDEN_CARD),
+    hands: state.hands.map((hand, i) => (i === seat ? hand : hand.map(() => HIDDEN_CARD))),
+  }
 }
 
 export interface ScopaOutcome { winners: number[]; draw: boolean; points: number[] }

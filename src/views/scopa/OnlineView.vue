@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BackPill from '@/components/BackPill.vue'
 import GameOverPanel from '@/components/GameOverPanel.vue'
 import SeatRoomLobby from '@/components/SeatRoomLobby.vue'
 import StatusBar from '@/components/StatusBar.vue'
 import ScopaTable from '@/games/scopa/ScopaTable.vue'
-import { createGame, outcome, type PlayerCount, type ScopaOutcome, type ScopaState } from '@/games/scopa/engine'
+import { legalCaptures, type ScopaOutcome, type ScopaState } from '@/games/scopa/engine'
 import { useScopaGame } from '@/games/scopa/useScopaGame'
-import type { Card } from '@/games/cards/italianDeck'
+import { sameCard, type Card } from '@/games/cards/italianDeck'
 import { seatRoomShareUrl, seatRoomsReady, useSeatRoom } from '@/lib/onlineRoomMulti'
 import { useCountdownCopy } from '@/lib/onlineRoom'
 
@@ -17,16 +17,14 @@ const router = useRouter()
 const room = useSeatRoom<ScopaState, ScopaOutcome>('scopa')
 const { copied, copy } = useCountdownCopy()
 
-const makeInitial = (players: number) => createGame(players as PlayerCount)
+// la mossa è calcolata e applicata solo dal server (Edge Function): qui si mostra soltanto quello che arriva.
+const g = useScopaGame()
+const selectedCard = ref<Card | null>(null)
+const captureOptions = computed<Card[][]>(() => (selectedCard.value ? legalCaptures(g.state.value.table, selectedCard.value.rank) : []))
 
-// `onMove` scatta solo per le mosse giocate qui in locale, mai per la sincronizzazione da remoto.
-const g = useScopaGame(undefined, (state) => {
-  room.pushState(state, state.status === 'finished' ? outcome(state) : null)
-})
-
-watch(() => room.gameState.value, (state) => { if (state) g.setState(state) }, { immediate: true })
+watch(() => room.gameState.value, (state) => { if (state) { g.setState(state); selectedCard.value = null } }, { immediate: true })
 watch(() => [room.seats.value.length, room.maxPlayers.value, room.status.value], () => {
-  if (room.status.value === 'lobby' && room.seats.value.length === room.maxPlayers.value) room.startIfFull(makeInitial)
+  if (room.status.value === 'lobby' && room.seats.value.length === room.maxPlayers.value) room.startIfFull()
 }, { immediate: true })
 
 onMounted(() => {
@@ -68,15 +66,25 @@ const overDetail = computed(() => {
   return `Coppia 1 e 3: ${r.points[0] ?? 0} punti · Coppia 2 e 4: ${r.points[1] ?? 0} punti`
 })
 
+function play(card: Card, capture: Card[]) {
+  room.sendMove({ played: card, captured: capture })
+}
 function selectCard(card: Card) {
   if (!interactive.value) return
-  g.selectCard(room.mySeat.value, card)
+  if (selectedCard.value && sameCard(selectedCard.value, card)) {
+    selectedCard.value = null
+    return
+  }
+  const options = legalCaptures(g.state.value.table, card.rank)
+  if (options.length <= 1) play(card, options[0] ?? [])
+  else selectedCard.value = card
 }
 function chooseCapture(option: Card[]) {
-  if (!interactive.value) return
-  g.chooseCapture(room.mySeat.value, option)
+  if (!interactive.value || !selectedCard.value) return
+  play(selectedCard.value, option)
+  selectedCard.value = null
 }
-function rematch() { room.rematch(makeInitial) }
+function rematch() { room.rematch() }
 </script>
 
 <template>
@@ -102,7 +110,7 @@ function rematch() { room.rematch(makeInitial) }
         <div class="my-4">
           <ScopaTable
             :state="g.state.value" :seat="room.mySeat.value" :names="room.playerNames.value" :interactive="interactive"
-            :selected-card="g.selectedCard.value" :capture-options="g.captureOptions.value" @select="selectCard" @choose="chooseCapture"
+            :selected-card="selectedCard" :capture-options="captureOptions" @select="selectCard" @choose="chooseCapture"
           />
         </div>
       </template>

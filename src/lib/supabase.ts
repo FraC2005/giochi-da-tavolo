@@ -32,7 +32,20 @@ export interface GameRoomRow {
   game: 'briscola' | 'scopa' | 'poker'
   max_players: number
   seats: Seat[]
+  /** Solo un flag "partita iniziata" (es. `{}` oppure `null`): lo stato vero vive in game_rooms_view, filtrato per posto. */
   state: unknown | null
   winner: unknown | null
+  updated_at: string
+}
+
+/**
+ * Proiezione dello stato di gioco filtrata per un singolo posto (`seat_id` = auth.uid() di chi
+ * siede in quel posto): le policy RLS la rendono leggibile solo a chi è autenticato come quel
+ * giocatore. Scritta esclusivamente dall'Edge Function `game-move`, mai dal client.
+ */
+export interface GameRoomViewRow {
+  code: string
+  seat_id: string
+  view: unknown | null
   updated_at: string
 }

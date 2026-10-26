@@ -6,7 +6,7 @@ import GameOverPanel from '@/components/GameOverPanel.vue'
 import SeatRoomLobby from '@/components/SeatRoomLobby.vue'
 import StatusBar from '@/components/StatusBar.vue'
 import BriscolaTable from '@/games/briscola/BriscolaTable.vue'
-import { createGame, outcome, type BriscolaOutcome, type BriscolaState, type PlayerCount } from '@/games/briscola/engine'
+import type { BriscolaOutcome, BriscolaState } from '@/games/briscola/engine'
 import { useBriscolaGame } from '@/games/briscola/useBriscolaGame'
 import type { Card } from '@/games/cards/italianDeck'
 import { seatRoomShareUrl, seatRoomsReady, useSeatRoom } from '@/lib/onlineRoomMulti'
@@ -17,16 +17,12 @@ const router = useRouter()
 const room = useSeatRoom<BriscolaState, BriscolaOutcome>('briscola')
 const { copied, copy } = useCountdownCopy()
 
-const makeInitial = (players: number) => createGame(players as PlayerCount)
-
-// `onMove` scatta solo per le mosse giocate qui in locale, mai per la sincronizzazione da remoto.
-const g = useBriscolaGame(undefined, (state) => {
-  room.pushState(state, state.status === 'finished' ? outcome(state) : null)
-})
+// la mossa è calcolata e applicata solo dal server (Edge Function): qui si mostra soltanto quello che arriva.
+const g = useBriscolaGame()
 
 watch(() => room.gameState.value, (state) => { if (state) g.setState(state) }, { immediate: true })
 watch(() => [room.seats.value.length, room.maxPlayers.value, room.status.value], () => {
-  if (room.status.value === 'lobby' && room.seats.value.length === room.maxPlayers.value) room.startIfFull(makeInitial)
+  if (room.status.value === 'lobby' && room.seats.value.length === room.maxPlayers.value) room.startIfFull()
 }, { immediate: true })
 
 onMounted(() => {
@@ -72,9 +68,9 @@ const overDetail = computed(() => {
 
 function playCard(card: Card) {
   if (!interactive.value) return
-  g.play(room.mySeat.value, card)
+  room.sendMove({ played: card })
 }
-function rematch() { room.rematch(makeInitial) }
+function rematch() { room.rematch() }
 </script>
 
 <template>

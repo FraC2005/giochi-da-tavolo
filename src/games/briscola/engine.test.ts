@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../cards/italianDeck'
 import { buildDeck, cardId } from '../cards/italianDeck'
-import { cardPoints, createGame, outcome, playCard, type BriscolaState } from './engine'
+import { cardPoints, createGame, outcome, playCard, viewForSeat, type BriscolaState } from './engine'
 
 const card = (suit: Card['suit'], rank: Card['rank']): Card => ({ suit, rank })
 
@@ -149,5 +149,40 @@ describe('end of game', () => {
     const trickPoints = cardPoints(4) + cardPoints(5) + cardPoints(1) + cardPoints(6)
     expect(game.points[2]).toBe(15 + trickPoints)
     expect(outcome(game)).toEqual({ winners: [0, 2], draw: false })
+  })
+})
+
+describe('playCard guards against untrusted input (server-side use)', () => {
+  it('ignores a play out of turn', () => {
+    const game = stateWith({ hands: [[card('spade', 4)], [card('bastoni', 6)]], turn: 0 })
+    const next = playCard(game, 1, card('bastoni', 6))
+    expect(next).toBe(game)
+  })
+
+  it('ignores a card the seat does not actually hold', () => {
+    const game = stateWith({ hands: [[card('spade', 4)], [card('bastoni', 6)]], turn: 0 })
+    const next = playCard(game, 0, card('coppe', 1))
+    expect(next).toBe(game)
+  })
+
+  it('ignores any play once the game is finished', () => {
+    const game = stateWith({ hands: [[card('spade', 4)], [card('bastoni', 6)]], status: 'finished' })
+    const next = playCard(game, 0, card('spade', 4))
+    expect(next).toBe(game)
+  })
+})
+
+describe('viewForSeat', () => {
+  it('keeps the given seat\'s hand but masks every other hand and the deck order', () => {
+    const game = stateWith({
+      hands: [[card('spade', 4)], [card('bastoni', 6)]],
+      deck: [card('denari', 7), card('coppe', 3)],
+    })
+    const view = viewForSeat(game, 0)
+    expect(view.hands[0]).toEqual(game.hands[0])
+    expect(view.hands[1]).not.toEqual(game.hands[1])
+    expect(view.hands[1]).toHaveLength(game.hands[1].length)
+    expect(view.deck).toHaveLength(game.deck.length)
+    expect(view.deck).not.toEqual(game.deck)
   })
 })

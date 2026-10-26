@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../cards/frenchDeck'
 import {
-  applyAction, ANTE, BIG_BLIND, createGame, discardAndDraw, SMALL_BLIND, STARTING_STACK,
+  applyAction, ANTE, BIG_BLIND, createGame, discardAndDraw, SMALL_BLIND, STARTING_STACK, viewForSeat,
   type PokerPlayer, type PokerState,
 } from './engine'
 
@@ -183,5 +183,33 @@ describe('showdown with side pots', () => {
     // nessuna fiche creata o persa: gli stack finali sommano quanto c'era in gioco (stack + contributi) prima dello showdown
     const total = next.players.reduce((sum, p) => sum + p.stack, 0)
     expect(total).toBe(1100 + 1200) // stack (0+0+300+800) più contributi al piatto (500+500+0+200), prima della chiamata di C
+  })
+})
+
+describe('viewForSeat', () => {
+  it('keeps the given seat\'s hand, masks the others and the deck order, while the game is playing', () => {
+    const state = stateWith({
+      players: [player({ hand: [card('hearts', 14), card('hearts', 13)] }), player({ hand: [card('clubs', 2), card('clubs', 3)] })],
+      deck: [card('diamonds', 5), card('diamonds', 6)],
+    })
+    const view = viewForSeat(state, 0)
+    expect(view.players[0].hand).toEqual(state.players[0].hand)
+    expect(view.players[1].hand).not.toEqual(state.players[1].hand)
+    expect(view.players[1].hand).toHaveLength(2)
+    expect(view.deck).toHaveLength(2)
+    expect(view.deck).not.toEqual(state.deck)
+  })
+
+  it('reveals every non-folded hand at showdown, but keeps folded hands hidden forever', () => {
+    const state = stateWith({
+      status: 'finished',
+      players: [
+        player({ hand: [card('hearts', 14), card('hearts', 13)] }),
+        player({ hand: [card('clubs', 2), card('clubs', 3)], folded: true }),
+      ],
+    })
+    const view = viewForSeat(state, 0)
+    expect(view.players[0].hand).toEqual(state.players[0].hand)
+    expect(view.players[1].hand).not.toEqual(state.players[1].hand) // folded: resta nascosta anche a showdown
   })
 })

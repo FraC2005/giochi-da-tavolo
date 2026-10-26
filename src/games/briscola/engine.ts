@@ -85,8 +85,14 @@ function resolveTrick(table: Card[], leader: number, briscola: Suit): number {
   return winner
 }
 
-/** Applica la giocata di `seat` (deve essere il suo turno e avere la carta in mano) e restituisce il nuovo stato. */
+/**
+ * Applica la giocata di `seat`: si auto-verifica (turno, carta davvero in mano) e restituisce lo
+ * stato inalterato se la giocata non è legale, invece di fidarsi del chiamante. Necessario perché,
+ * nella modalità online, questa funzione viene invocata da un server (Edge Function) su input
+ * di un client che potrebbe non essere la UI onesta del gioco.
+ */
 export function playCard(state: BriscolaState, seat: number, card: Card): BriscolaState {
+  if (state.status !== 'playing' || state.turn !== seat || !state.hands[seat].some((c) => sameCard(c, card))) return state
   const hands = state.hands.map((hand, i) => (i === seat ? hand.filter((c) => !sameCard(c, card)) : hand))
   const table = state.table.slice()
   table[seat] = card
@@ -125,6 +131,21 @@ export function playCard(state: BriscolaState, seat: number, card: Card): Brisco
     trickCount: state.trickCount + 1,
     lastTrick: { cards: completedTrick, winner },
     status,
+  }
+}
+
+const HIDDEN_CARD: Card = { suit: 'spade', rank: 2 }
+
+/**
+ * Proiezione dello stato per il posto `seat`: le mani degli altri e l'ordine del mazzo sono
+ * sostituiti da carte segnaposto (mai mostrate, serve solo a non far perdere la lunghezza degli
+ * array). Usata dal server online per non mandare a ciascun client le carte degli avversari.
+ */
+export function viewForSeat(state: BriscolaState, seat: number): BriscolaState {
+  return {
+    ...state,
+    deck: state.deck.map(() => HIDDEN_CARD),
+    hands: state.hands.map((hand, i) => (i === seat ? hand : hand.map(() => HIDDEN_CARD))),
   }
 }
 

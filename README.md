@@ -3,8 +3,9 @@
 Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris**, **Briscola**, **Scopa** o **Poker** e giochi contro un
 amico: sullo stesso schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione.
 Ogni gioco da tavolo ha anche un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` +
-`modal` di DaisyUI. C'è anche un **Breakout** in solitaria con classifica condivisa, primo di una serie di
-giochi arcade pensati per lo stesso sito.
+`modal` di DaisyUI. Ci sono anche giochi arcade in solitaria con classifica condivisa: **Breakout**, un
+**Platformer** a piattaforme con livelli caricati da file, e un **roguelike ASCII a turni** con dungeon generato
+proceduralmente e salvataggio in locale.
 
 Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
 scacchi, tutti gli altri motori (dama, tris, briscola, scopa, poker) scritti da zero per questo progetto. Il
@@ -56,6 +57,24 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
   disegno su `<canvas>`) — paddle con tastiera (frecce o A/D) o trascinando mouse/dito, mattoni che reggono più
   di un colpo dal secondo livello in su, livelli via via più pieni di mattoni. Classifica condivisa (nome e
   punteggio) salvata su Supabase, con le 10 migliori partite mostrate a fine partita.
+- **Platformer**: in solitaria (`src/games/platformer/engine.ts`, stessa impostazione del Breakout — fisica
+  pura, testata senza canvas) — gravità, salto, collisioni con le piattaforme risolte un asse alla volta,
+  nemici che pattugliano avanti e indietro (si schiacciano saltandoci sopra, altrimenti tolgono una vita), 3
+  livelli caricati da file JSON (`src/games/platformer/levels/*.json`). Stessa classifica condivisa del Breakout.
+- **Dungeon ASCII**: roguelike a turni in solitaria (`src/games/roguelike/engine.ts`, con test), ispirato a The
+  Binding of Isaac. Si sceglie uno tra 6 personaggi (tutti disponibili fin da subito, pensati per stili di
+  gioco diversi: molta vita, colpi perforanti, tiro triplo, armatura, rigenerazione), poi si esplora un dungeon
+  di stanze generate proceduralmente su una griglia e collegate da porte, con nemici che si svegliano quando
+  entri nella stanza e porte bloccate finché non la liberi. Come in Isaac non si attacca a corpo a corpo (i
+  nemici bloccano il passo come un muro): si spara in una delle 4 direzioni con un raggio istantaneo che
+  attraversa la stanza, raccogliendo lungo la strada oggetti che modificano il modo di combattere (più danno,
+  colpi perforanti che attraversano più nemici in linea, tiro triplo, armatura, rigenerazione, cura, più vita
+  massima). Ogni piano termina in una stanza con un boss vero — più vita, attacco a distanza se è in linea con
+  te, e una fase "infuriata" sotto metà vita — e il dungeon si ripete su 5 piani via via più difficili prima
+  della vittoria finale. Resa in caratteri ASCII ma con emoji e colori al posto delle lettere semplici
+  (`RoguelikeBoard.vue`), non su `<canvas>`. Partita salvata in automatico nel browser (`localStorage`, non su
+  Supabase: è una partita personale, non serve condividerla tra dispositivi) — alla riapertura propone di
+  continuarla.
 - **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
   tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
   un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in
@@ -110,9 +129,11 @@ alter table rooms drop constraint rooms_game_check;
 alter table rooms add constraint rooms_game_check check (game in ('chess', 'checkers', 'tris'));
 ```
 
-Briscola e Scopa (e in futuro Poker) usano una seconda tabella, `game_rooms`, perché possono avere più di 2
-giocatori nella stessa stanza: un "posto" (seat) per giocatore invece dei soli `host`/`guest`. Eseguila anche
-questa nello stesso SQL Editor:
+Briscola, Scopa e Poker usano una seconda tabella, `game_rooms`, perché possono avere più di 2 giocatori nella
+stessa stanza: un "posto" (seat) per giocatore invece dei soli `host`/`guest`. A differenza di Scacchi/Dama/Tris,
+qui c'è informazione nascosta (le mani di carte): `game_rooms` contiene solo i dati di lobby (chi c'è, quanti
+posti, se la partita è iniziata, chi ha vinto), non lo stato di gioco vero — quello vive altrove, filtrato per
+giocatore, come spiegato nella sezione successiva. Eseguila nello stesso SQL Editor:
 
 ```sql
 create table game_rooms (
@@ -131,12 +152,61 @@ create trigger game_rooms_touch_updated_at before update on game_rooms
 
 alter table game_rooms enable row level security;
 
-create policy "chiunque legge" on game_rooms for select using (true);
-create policy "chiunque crea" on game_rooms for insert with check (true);
-create policy "chiunque aggiorna" on game_rooms for update using (true);
+create policy "game_rooms select" on game_rooms for select using (true);
+create policy "game_rooms insert" on game_rooms for insert with check (auth.uid() is not null);
+create policy "game_rooms update seats" on game_rooms for update using (auth.uid() is not null);
 
 alter publication supabase_realtime add table game_rooms;
 ```
+
+### Mani private per Briscola, Scopa e Poker
+
+Queste tre tabelle in più, l'autenticazione anonima e l'Edge Function `game-move` sostituiscono la versione
+precedente (che salvava lo stato completo, comprese le carte di tutti, in `game_rooms.state` — leggibile da
+chiunque fosse nella stanza anche aprendo gli strumenti per sviluppatori). Il file
+[`supabase/migrations/0001_private_card_state.sql`](supabase/migrations/0001_private_card_state.sql) contiene
+tutto l'SQL di questa sezione, pronto da incollare nell'SQL Editor.
+
+1. **Autenticazione anonima**: in **Authentication → Sign In / Providers**, abilita "Allow anonymous sign-ins".
+   Serve perché Poker/Scopa/Briscola hanno bisogno di un'identità verificata dal server (non più una stringa
+   casuale salvata in locale, di cui ci si fiderebbe senza controlli) per decidere chi può leggere la mano di
+   chi. Non richiede email o password: è trasparente per chi gioca.
+2. Esegui l'SQL della migration (tabelle `game_rooms_state`, mai leggibile dal client, e `game_rooms_view`, una
+   riga per posto leggibile solo da chi siede in quel posto):
+
+```sql
+create table game_rooms_state (
+  code text primary key references game_rooms(code) on delete cascade,
+  state jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table game_rooms_state enable row level security;
+
+create table game_rooms_view (
+  code text not null references game_rooms(code) on delete cascade,
+  seat_id uuid not null,
+  view jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (code, seat_id)
+);
+alter table game_rooms_view enable row level security;
+create policy "game_rooms_view select own seat" on game_rooms_view for select using (auth.uid() = seat_id);
+
+alter publication supabase_realtime add table game_rooms_view;
+```
+
+3. **Deploya l'Edge Function** che calcola le mosse e scrive le due tabelle sopra (serve la
+   [Supabase CLI](https://supabase.com/docs/guides/cli)):
+
+```sh
+supabase login
+supabase link --project-ref <il-tuo-project-ref>
+supabase functions deploy game-move
+```
+
+Il codice della funzione è in `supabase/functions/game-move/`. Non importa i motori di gioco da `src/` perché
+le Edge Function vengono pacchettate solo con i file sotto `supabase/functions`: le regole di Poker, Scopa e
+Briscola sono duplicate in `supabase/functions/_shared/` e vanno aggiornate a mano lì se cambiano in `src/`.
 
 Breakout (e i prossimi giochi arcade in solitaria) usa una terza tabella, `leaderboard`, per i punteggi
 condivisi — una riga per partita giocata, non per stanza:
@@ -199,6 +269,9 @@ src/
     cards/      mazzo italiano (italianDeck.ts), mazzo francese (frenchDeck.ts), mescolamento condiviso
                 (shuffle.ts), componente carta generico (PlayingCard.vue)
     breakout/   engine.ts (simulazione fisica pura, testabile senza canvas), BreakoutCanvas.vue
+    platformer/ engine.ts (idem), PlatformerCanvas.vue, levels/*.json (livelli caricati da file)
+    roguelike/  engine.ts (generazione dungeon + combattimento a turni), RoguelikeBoard.vue (resa ASCII),
+                save.ts (salvataggio in localStorage)
     rules.ts    mappa gioco → passi del tutorial guidato, usata da GameMenuView
   components/   RoomLobby, SeatRoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi
   lib/          player.ts (identità anonima), supabase.ts, onlineRoom.ts (stanze 1v1), onlineRoomMulti.ts
@@ -214,12 +287,6 @@ src/
   si disconnette, solo l'assenza di risposta.
 - Nessuna cronologia delle partite passate né profilo giocatore: è pensato per una partita alla volta tra amici
   (fa eccezione la classifica di Breakout, che è condivisa e persistente).
-- **Privacy delle mani nei giochi di carte online (Briscola, Scopa, Poker)**: oggi lo stato dell'intera partita,
-  comprese le carte di *tutti* i giocatori, viene salvato in un'unica riga Supabase e trasmesso a chiunque sia
-  nella stanza; l'interfaccia mostra solo le proprie carte, ma i dati di quelle altrui arrivano comunque nel
-  browser di ognuno e sono visibili aprendo gli strumenti per sviluppatori. Risolverlo per bene richiede
-  un'identità autenticata vera (oggi è solo un ID casuale salvato in locale, di cui ci si fida lato client) e
-  regole di sicurezza che filtrino per giocatore lato server — non ancora fatto.
 - Il motore della dama implementa le regole anglo-americane classiche (non le varianti internazionali con le
   "dame volanti" o la regola della cattura massima obbligatoria).
 - Il Poker è semplificato rispetto a un tavolo da casinò: un rilancio "corto" (all-in per meno del rilancio
@@ -227,3 +294,8 @@ src/
   regola rigorosa; allo showdown si vedono la categoria della mano di ciascuno e quanto ha vinto, non le carte
   esatte degli avversari. Si gioca una sola mano per partita (stack e bui ripartono da zero a ogni rivincita),
   non un vero torneo con bui crescenti.
+- L'Edge Function `game-move` (che calcola le mosse di Briscola/Scopa/Poker lato server, per non far vedere le
+  mani nascoste) non ho potuto collaudarla contro un progetto Supabase reale, per lo stesso motivo delle
+  policy sopra: serve un account che solo tu puoi creare. La logica è stata scritta con cura, con test
+  automatici sulle regole di ciascun gioco, ma prima di fidarcene per una partita importante vale la pena
+  provarla con un amico dopo il deploy.
