@@ -9,9 +9,9 @@ const emit = defineEmits<{ (e: 'cell-click', index: number): void }>()
   <div class="mx-auto grid aspect-square w-full max-w-sm grid-cols-3 gap-2 rounded-box bg-base-300 p-2 shadow-inner">
     <button
       v-for="(cell, i) in board" :key="i" type="button"
-      class="grid place-items-center rounded-field bg-base-100 text-5xl font-black leading-none shadow-sm transition"
+      class="grid aspect-square place-items-center rounded-field bg-base-100 text-4xl font-bold leading-none shadow-sm transition-colors"
       :class="[
-        winningLine?.includes(i) ? 'bg-primary/15 text-primary' : cell === 'X' ? 'text-secondary' : cell === 'O' ? 'text-accent' : 'text-base-content/20',
+        winningLine?.includes(i) ? 'bg-primary/15 text-primary' : cell === 'X' ? 'text-secondary' : cell === 'O' ? 'text-accent' : '',
         interactive && cell === null ? 'cursor-pointer hover:bg-base-200' : 'cursor-default',
       ]"
       :disabled="!interactive || cell !== null"
