@@ -2,8 +2,9 @@
 
 Sito vetrina dove scegli **Dama**, **Scacchi**, **Tris**, **Briscola**, **Scopa** o **Poker** e giochi contro un
 amico: sullo stesso schermo a turni, oppure online da case diverse con un codice stanza. Nessuna registrazione.
-Ogni gioco ha anche un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` + `modal` di
-DaisyUI.
+Ogni gioco da tavolo ha anche un tutorial guidato passo-passo ("Come si gioca") con i componenti `steps` +
+`modal` di DaisyUI. C'è anche un **Breakout** in solitaria con classifica condivisa, primo di una serie di
+giochi arcade pensati per lo stesso sito.
 
 Stack: **Vue 3 + TypeScript + Pinia + Vue Router**, **Tailwind 4 + DaisyUI 5**, **chess.js** per le regole degli
 scacchi, tutti gli altri motori (dama, tris, briscola, scopa, poker) scritti da zero per questo progetto. Il
@@ -51,6 +52,10 @@ bisogno. La modalità online mostrerà un avviso invece di un errore.
   reale tramite Supabase. Dama, Scacchi e Tris sono sempre 1 contro 1 (stanza "host/guest"); Briscola, Scopa e
   Poker possono avere più posti (fino a 4 per Briscola/Scopa, fino a 6 per il Poker), uno per giocatore, nella
   stessa stanza. Rivincita senza cambiare stanza (per Dama/Scacchi/Tris con i colori invertiti).
+- **Breakout**: in solitaria (`src/games/breakout/engine.ts`, simulazione fisica pura testata separatamente dal
+  disegno su `<canvas>`) — paddle con tastiera (frecce o A/D) o trascinando mouse/dito, mattoni che reggono più
+  di un colpo dal secondo livello in su, livelli via via più pieni di mattoni. Classifica condivisa (nome e
+  punteggio) salvata su Supabase, con le 10 migliori partite mostrate a fine partita.
 - **Come si gioca**: ogni gioco che ha un tutorial mostra un pulsante "Come si gioca" nel suo menu, che apre un
   tour guidato passo-passo (`src/components/RulesTour.vue`, componenti `steps` + `modal` di DaisyUI). Aggiungere
   un tutorial a un nuovo gioco significa scrivere `src/games/<gioco>/rules.ts` e registrarlo in
@@ -133,6 +138,26 @@ create policy "chiunque aggiorna" on game_rooms for update using (true);
 alter publication supabase_realtime add table game_rooms;
 ```
 
+Breakout (e i prossimi giochi arcade in solitaria) usa una terza tabella, `leaderboard`, per i punteggi
+condivisi — una riga per partita giocata, non per stanza:
+
+```sql
+create table leaderboard (
+  id bigint generated always as identity primary key,
+  game text not null,
+  player_name text not null,
+  score int not null,
+  created_at timestamptz not null default now()
+);
+
+alter table leaderboard enable row level security;
+
+create policy "chiunque legge" on leaderboard for select using (true);
+create policy "chiunque inserisce" on leaderboard for insert with check (true);
+
+create index leaderboard_game_score_idx on leaderboard (game, score desc);
+```
+
 3. In **Project Settings → API**, copia "Project URL" e la chiave "anon public".
 4. Crea un file `.env.local` nella cartella del progetto (copia `.env.example`) e incolla i due valori:
 
@@ -173,19 +198,28 @@ src/
                 PokerTable.vue, rules.ts (tutorial) — 2-6 giocatori, Texas Hold'em o all'italiana
     cards/      mazzo italiano (italianDeck.ts), mazzo francese (frenchDeck.ts), mescolamento condiviso
                 (shuffle.ts), componente carta generico (PlayingCard.vue)
+    breakout/   engine.ts (simulazione fisica pura, testabile senza canvas), BreakoutCanvas.vue
     rules.ts    mappa gioco → passi del tutorial guidato, usata da GameMenuView
   components/   RoomLobby, SeatRoomLobby, GameOverPanel, StatusBar, BackPill, RulesTour — condivisi tra i giochi
   lib/          player.ts (identità anonima), supabase.ts, onlineRoom.ts (stanze 1v1), onlineRoomMulti.ts
-                (stanze con più posti, per Briscola/Scopa/Poker), tour.ts (tipo TourStep)
-  views/        HomeView, GameMenuView, e Local/OnlineView per ciascun gioco
+                (stanze con più posti, per Briscola/Scopa/Poker), leaderboard.ts (classifiche condivise, per i
+                giochi arcade in solitaria), tour.ts (tipo TourStep)
+  views/        HomeView, GameMenuView, e Local/OnlineView (o solo LocalView, per i giochi in solitaria come
+                Breakout) per ciascun gioco
 ```
 
 ## Limiti noti
 
 - Le pagine online richiedono che entrambi i giocatori tengano la scheda aperta; non c'è notifica se l'altro
   si disconnette, solo l'assenza di risposta.
-- Nessuna cronologia delle partite passate, nessun profilo, nessuna classifica: è pensato per una partita alla
-  volta tra amici.
+- Nessuna cronologia delle partite passate né profilo giocatore: è pensato per una partita alla volta tra amici
+  (fa eccezione la classifica di Breakout, che è condivisa e persistente).
+- **Privacy delle mani nei giochi di carte online (Briscola, Scopa, Poker)**: oggi lo stato dell'intera partita,
+  comprese le carte di *tutti* i giocatori, viene salvato in un'unica riga Supabase e trasmesso a chiunque sia
+  nella stanza; l'interfaccia mostra solo le proprie carte, ma i dati di quelle altrui arrivano comunque nel
+  browser di ognuno e sono visibili aprendo gli strumenti per sviluppatori. Risolverlo per bene richiede
+  un'identità autenticata vera (oggi è solo un ID casuale salvato in locale, di cui ci si fida lato client) e
+  regole di sicurezza che filtrino per giocatore lato server — non ancora fatto.
 - Il motore della dama implementa le regole anglo-americane classiche (non le varianti internazionali con le
   "dame volanti" o la regola della cattura massima obbligatoria).
 - Il Poker è semplificato rispetto a un tavolo da casinò: un rilancio "corto" (all-in per meno del rilancio
